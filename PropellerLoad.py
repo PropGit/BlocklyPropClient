@@ -24,9 +24,9 @@ class PropellerLoad:
 
         # Find the path from which application was launched
         # realpath expands to full path if __file__ or sys.argv[0] contains just a filename
-	self.appdir = os.path.dirname(os.path.realpath(__file__))
+        self.appdir = os.path.dirname(os.path.realpath(__file__))
         if self.appdir == "" or self.appdir == "/":
-	    # launch path is blank; try extracting from argv
+            # launch path is blank; try extracting from argv
             self.appdir = os.path.dirname(os.path.realpath(sys.argv[0]))
         self.logger.debug("PropellerLoad.py: Application running from: %s", self.appdir)
 
@@ -49,32 +49,32 @@ class PropellerLoad:
 
 
     def loader(cmdOptions):
-        # Launch Propeller Loader with cmdOptions and return True/False, output and error string    
-    	try:
-    	    if platform.system() == "Windows":
-    	        startupinfo = subprocess.STARTUPINFO()
-    	        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-    	        process = subprocess.Popen([self.appdir + self.loaderExe[platform.system()], cmdOptions], stdout=subprocess.PIPE, stderr=subprocess.PIPE, startupinfo=startupinfo)
-    	    else:
-    	        process = subprocess.Popen([self.appdir + self.loaderExe[platform.system()], cmdOptions], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        # Launch Propeller Loader with cmdOptions and return True/False, output and error string
+        try:
+            if platform.system() == "Windows":
+                startupinfo = subprocess.STARTUPINFO()
+                startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+                process = subprocess.Popen([self.appdir + self.loaderExe[platform.system()], cmdOptions], stdout=subprocess.PIPE, stderr=subprocess.PIPE, startupinfo=startupinfo)
+            else:
+                process = subprocess.Popen([self.appdir + self.loaderExe[platform.system()], cmdOptions], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-    	    out, err = process.communicate()
-        
-    	    if process.returncode:
-    	        self.logger.error("Error result: %s", process.returncode)
-    	        self.logger.error("Error string: %s", err)
-    	    self.logger.debug("Load output string: %s", out)
+            out, err = process.communicate()
 
-    	    if process.returncode == 0:
-    	        success = True
-    	    else:
-    	        success = False
+            if process.returncode:
+                self.logger.error("Error result: %s", process.returncode)
+                self.logger.error("Error string: %s", err)
+            self.logger.debug("Load output string: %s", out)
 
-    	    return success, out or '', err or ''
+            if process.returncode == 0:
+                success = True
+            else:
+                success = False
 
-    	except OSError as ex:
-    	    self.logger.error("%s", ex.message)
-    	    return False, '', 'Exception: OSError'
+            return success, out or '', err or ''
+
+        except OSError as ex:
+            self.logger.error("%s", ex.message)
+            return False, '', 'Exception: OSError'
 
 
 
@@ -87,20 +87,20 @@ class PropellerLoad:
         self.logger.info("Refreshing ports list")
 
         # Get COM ports
-	success, out, err = loader("-P")
+        success, out, err = loader("-P")
         if success:
             self.ports = out.splitlines()
         else:
             self.logger.debug('COM Port request returned %s', err)
- 
+
         # Get Wi-Fi ports
-	success, out, err = loader("-W")
+        success, out, err = loader("-W")
         if success:
             self.wports = out.splitlines()
             # Extract Wi-Fi module names and sort them
             wnames = []
             for i in range(len(self.wports)):
-              wnames.extend([getWiFiName(self.wports[i])])
+                wnames.extend([getWiFiName(self.wports[i])])
             wnames.sort(None, None, False)
         else:
             self.logger.debug('WiFi Port request returned %s', err)
@@ -130,7 +130,7 @@ class PropellerLoad:
 #            else:
 #                # Failure
 #                self.logger.debug('COM Port request returned %s', err)
-# 
+#
 #            # Get Wi-Fi ports
 #            process = subprocess.Popen([self.appdir + self.propeller_load_executables[platform.system()], "-W"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 #            out, err = process.communicate()
@@ -159,11 +159,11 @@ class PropellerLoad:
         self.loading = True
 
         # Patch until we figure out why the __init__ is not getting called
-	if not self.appdir or self.appdir == "" or self.appdir == "/":
+        if not self.appdir or self.appdir == "" or self.appdir == "/":
             # realpath expands to full path if __file__ or sys.argv[0] contains just a filename
-	    self.appdir = os.path.dirname(os.path.realpath(__file__))
+            self.appdir = os.path.dirname(os.path.realpath(__file__))
             if self.appdir == "" or self.appdir == "/":
-	        # launch path is blank; try extracting from argv
+                # launch path is blank; try extracting from argv
                 self.appdir = os.path.dirname(os.path.realpath(sys.argv[0]))
 
         executable = self.appdir + self.propeller_load_executables[platform.system()]
