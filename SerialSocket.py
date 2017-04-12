@@ -21,25 +21,31 @@ class SerialSocket(WebSocket):
         self.serial = Serial()
 
     def received_message(self, message):
+        # Received message from BlocklyProp system
         self.logger.info('Message received')
         self.logger.debug('Message is: %s', message.data)
 
         if message.data[0:len(OPEN_CONNECTION_STRING)] == OPEN_CONNECTION_STRING:
+            # Message is a serial connection request
             connection_string = message.data[len(OPEN_CONNECTION_STRING):]
             self.logger.debug('Connection config string: %s', connection_string)
 
+            # Get initial port name and set default baud rate
             port = connection_string
             baudrate = 115200
 
+            # Update port name and baud rate if optional baud rate requested in message
             connection_info = connection_string.split(' ')
-            if len(connection_info) == 2:
-                port = connection_info[0]
-                baudrate = connection_info[1]
+            if len(connection_info) > 1:
+                baudrate = connection_info[len(connection_info)-1]
+                port = connection_string[0:-(len(baudrate)+1)]
                 self.logger.debug('Setting serial port config: Port %s, Speed %s', port, baudrate)
 
+            # Set serial object's port and baudrate
             self.serial.baudrate = baudrate
             self.serial.port = port
 
+            # Open serial port
             try:
                 self.logger.info("Opening serial port %s", port)
                 self.serial.open()
@@ -49,6 +55,7 @@ class SerialSocket(WebSocket):
                 self.send("Failed to connect to: %s using baud rate %s\n\r(%s)\n\r" % (port, baudrate, se.message))
                 return
 
+            # Launch serial handler if successful
             if self.serial.isOpen():
                 self.logger.info("Serial port %s is open.", port)
                 self.send("Connection established with: %s using baud rate %s\n\r" % (port, baudrate))
@@ -56,13 +63,17 @@ class SerialSocket(WebSocket):
             else:
                 self.send("Failed to connect to: %s using baud rate %s\n\r" % (port, baudrate))
         else:
+            # Message is data to transmit
             if self.serial.isOpen():
                 self.logger.info("Sending serial data")
+                # Echo data to console
                 self.send(message.data)
+                # Transmit data on serial port
                 self.serial.write(message.data)
 
-    # close serial connection
+
     def close(self, code=1000, reason=''):
+        # Close serial connection
         self.logger.info("Closing serial port")
         print 'closing'
         self.serial.close()
@@ -70,6 +81,8 @@ class SerialSocket(WebSocket):
 
 
 def serial_poll(serial, socket):
+    # Poll serial port for incoming data
+    # Runs port is closed or an exception occurs
     module_logger.debug('Polling serial port.')
     try:
         while serial.isOpen():
