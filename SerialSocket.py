@@ -1,4 +1,5 @@
 from ws4py.websocket import WebSocket
+import socket
 from serial import Serial, SerialException
 from time import sleep
 import thread
@@ -39,11 +40,14 @@ class SerialSocket(WebSocket):
             if len(connection_info) > 1:
                 baudrate = connection_info[len(connection_info)-1]
                 port = connection_string[0:-(len(baudrate)+1)]
-                self.logger.debug('Setting serial port config: Port %s, Speed %s', port, baudrate)
 
             # Set serial object's port and baudrate
+            self.logger.debug('Setting port config: Port %s, Speed %s', port, baudrate)
             self.serial.baudrate = baudrate
             self.serial.port = port
+
+            # Create a TCP/IP socket
+            self.wifisock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
             # Open serial port
             try:
@@ -74,9 +78,11 @@ class SerialSocket(WebSocket):
 
     def close(self, code=1000, reason=''):
         # Close serial connection
-        self.logger.info("Closing serial port")
-        print 'closing'
-        self.serial.close()
+        self.logger.info("Closing port")
+        # Close port
+        if self.serial.isOpen():
+            self.serial.close()
+        self.wifisock.close()
         super(SerialSocket, self).close(code, reason)
 
 
