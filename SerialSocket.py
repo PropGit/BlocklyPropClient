@@ -8,6 +8,10 @@ import logging
 
 __author__ = 'Michel'
 
+# TCP/IP Network Port
+NET_PORT = 23
+
+# BlocklyProp serial connection request string
 OPEN_CONNECTION_STRING = "+++ open port "
 
 # Enable logging for functions outside of the class definition
@@ -27,27 +31,28 @@ class SerialSocket(WebSocket):
         self.logger.debug('Message is: %s', message.data)
 
         if message.data[0:len(OPEN_CONNECTION_STRING)] == OPEN_CONNECTION_STRING:
-            # Message is a serial connection request
+            # Message is a connection request
             connection_string = message.data[len(OPEN_CONNECTION_STRING):]
             self.logger.debug('Connection config string: %s', connection_string)
 
-            # Get initial port name and set default baud rate
+            # Start with initial port name and default baud rate
             port = connection_string
             baudrate = 115200
 
             # Update port name and baud rate if optional baud rate requested in message
             connection_info = connection_string.split(' ')
             if len(connection_info) > 1:
+                # Found space-delimited elements, last element must be baudrate
                 baudrate = connection_info[len(connection_info)-1]
+                # First element(s) must be wired or wireless port
                 port = connection_string[0:-(len(baudrate)+1)]
 
-            # Set serial object's port and baudrate
+            #!!! Need to determine if port is wired or wireless here, then open properly
+
+            # Set wired serial port and baudrate
             self.logger.debug('Setting port config: Port %s, Speed %s', port, baudrate)
             self.serial.baudrate = baudrate
             self.serial.port = port
-
-            # Create a TCP/IP socket
-            self.wifisock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
             # Open serial port
             try:
@@ -58,6 +63,23 @@ class SerialSocket(WebSocket):
                 self.logger.error("Serial exception message: %s", se.message)
                 self.send("Failed to connect to: %s using baud rate %s\n\r(%s)\n\r" % (port, baudrate, se.message))
                 return
+
+            # Create a TCP/IP socket
+            self.wifisock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+            # Set wireless serial port
+            self.wifiname = port
+            # !!! Get network address here
+#            self.wifiaddr = ?
+            self.wifiport = NET_PORT
+
+            # Open TCP/IP socket
+            try:
+               self.logger.info("Opening network port %s:%s", self.wifiaddr, self.wifiport)
+               self.wifisock.connect((self.wifiaddr, self.wifiport))
+            except:
+               self.logger.error("Failed to connect to %s:%s", self.wifiaddr, self.wifiport)
+               return
 
             # Launch serial handler if successful
             if self.serial.isOpen():
@@ -82,6 +104,7 @@ class SerialSocket(WebSocket):
         # Close port
         if self.serial.isOpen():
             self.serial.close()
+        # !!! Need to determine if wifisock is open here
         self.wifisock.close()
         super(SerialSocket, self).close(code, reason)
 
