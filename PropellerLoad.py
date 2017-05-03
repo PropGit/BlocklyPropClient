@@ -115,8 +115,8 @@ class PropellerLoad:
             # Add requested port
             if com_port is not None:
                 # Find port(s) named com_port
-                targetWiFi = [l for l in self.wports if isWiFiName(l, com_port)]
-                if len(targetWiFi) > 0:
+                (success, targetWiFi) = self.isWiFiName(com_port)
+                if success:
                     # Found Wi-Fi match
                     self.logger.debug('Requested port %s is at %s', com_port, getWiFiIP(targetWiFi[0]))
                     command.extend(["-i"])
@@ -139,6 +139,18 @@ class PropellerLoad:
         finally:
             # Done, clear loading flag to process other events
             self.loading = False
+
+    def isWiFiName(self, portName):
+        # Return True (and WiFi Record(s)) if portName is found in WiFi Ports list
+        WiFiRecords = [l for l in self.wports if getWiFiName(l) == portName]
+        if len(WiFiRecords) > 0:
+            success = True
+        else:
+            success = False
+        return success, WiFiRecords
+
+    def isFalse(self):
+        return False
 
 
 def loader(self, cmdOptions):
@@ -180,13 +192,6 @@ def loader(self, cmdOptions):
 
 
 
-
-
-
-
-def isWiFiName(string, wifiName):
-# Return True if string contains Wi-Fi Module record named wifiName
-    return getWiFiName(string) == wifiName
 
 
 def getWiFiName(string):

@@ -5,6 +5,7 @@ from time import sleep
 import thread
 import re
 import logging
+from PropellerLoad import PropellerLoad
 
 __author__ = 'Michel'
 
@@ -24,6 +25,8 @@ class SerialSocket(WebSocket):
 
         super(SerialSocket, self).__init__(sock, protocols, extensions, environ, heartbeat_freq)
         self.serial = Serial()
+
+    propellerLoad = PropellerLoad()
 
     def received_message(self, message):
         # Received message from BlocklyProp system
@@ -47,47 +50,50 @@ class SerialSocket(WebSocket):
                 # First element(s) must be wired or wireless port
                 port = connection_string[0:-(len(baudrate)+1)]
 
-            #!!! Need to determine if port is wired or wireless here, then open properly
+            # Determine if port is wired or wireless, and then open it properly
+            (IsWiFi, targetWiFi) = self.propellerLoad.isWiFiName(port)
+            if not self.propellerLoad.IsFalse():
+                # Appears to be a wired (USB/Serial) port
+                # Set wired serial port and baudrate
+                self.logger.debug('Setting port config: Port %s, Speed %s', port, baudrate)
+                self.serial.baudrate = baudrate
+                self.serial.port = port
 
-            # Set wired serial port and baudrate
-            self.logger.debug('Setting port config: Port %s, Speed %s', port, baudrate)
-            self.serial.baudrate = baudrate
-            self.serial.port = port
-
-            # Open serial port
-            try:
-                self.logger.info("Opening serial port %s", port)
-                self.serial.open()
-            except SerialException as se:
-                self.logger.error("Failed to connect to %s", port)
-                self.logger.error("Serial exception message: %s", se.message)
-                self.send("Failed to connect to: %s using baud rate %s\n\r(%s)\n\r" % (port, baudrate, se.message))
-                return
-
-            # Create a TCP/IP socket
-            self.wifisock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-            # Set wireless serial port
-            self.wifiname = port
-            # !!! Get network address here
-#            self.wifiaddr = ?
-            self.wifiport = NET_PORT
-
-            # Open TCP/IP socket
-            try:
-               self.logger.info("Opening network port %s:%s", self.wifiaddr, self.wifiport)
-               self.wifisock.connect((self.wifiaddr, self.wifiport))
-            except:
-               self.logger.error("Failed to connect to %s:%s", self.wifiaddr, self.wifiport)
-               return
-
-            # Launch serial handler if successful
-            if self.serial.isOpen():
-                self.logger.info("Serial port %s is open.", port)
-                self.send("Connection established with: %s using baud rate %s\n\r" % (port, baudrate))
-                thread.start_new_thread(serial_poll, (self.serial, self))
+                # Open serial port
+                try:
+                    self.logger.info("Opening serial port %s", port)
+                    self.serial.open()
+                except SerialException as se:
+                    self.logger.error("Failed to connect to %s", port)
+                    self.logger.error("Serial exception message: %s", se.message)
+                    self.send("Failed to connect to: %s using baud rate %s\n\r(%s)\n\r" % (port, baudrate, se.message))
+                    return
+                # Launch serial handler if successful
+                if self.serial.isOpen():
+                    self.logger.info("Serial port %s is open.", port)
+                    self.send("Connection established with: %s using baud rate %s\n\r" % (port, baudrate))
+                    thread.start_new_thread(serial_poll, (self.serial, self))
+                else:
+                    self.send("Failed to connect to: %s using baud rate %s\n\r" % (port, baudrate))
             else:
-                self.send("Failed to connect to: %s using baud rate %s\n\r" % (port, baudrate))
+                # Appears to be a wireless (Wi-Fi) port
+                # Create a TCP/IP socket
+                self.wifisock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+                # Set wireless serial port
+                self.wifiname = port
+                # !!! Get network address here
+                self.wifiaddr = "0.0.0.0"
+                self.wifiport = NET_PORT
+
+                # Open TCP/IP socket
+                try:
+                   self.logger.info("Opening network port %s:%s", self.wifiaddr, self.wifiport)
+                   self.wifisock.connect((self.wifiaddr, self.wifiport))
+                except:
+                   self.logger.error("Failed to connect to %s:%s", self.wifiaddr, self.wifiport)
+                   return
+
         else:
             # Message is data to transmit
             if self.serial.isOpen():
